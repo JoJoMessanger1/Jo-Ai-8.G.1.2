@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusAI Master - Ultimate Edition</title>
+    <style>
+        :root {
+            --bg: #030712;
+            --glass: rgba(17, 24, 39, 0.85);
+            --accent: #3b82f6;
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #f1f5f9;
+            --code-bg: #000000;
+        }
+
+        * { box-sizing: border-box; transition: all 0.2s ease; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar */
+        #sidebar { width: 260px; background: var(--glass); backdrop-filter: blur(20px); border-right: 1px solid var(--border); padding: 25px; display: flex; flex-direction: column; z-index: 100; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--accent); margin-bottom: 30px; }
+
+        /* Main View */
+        main { flex: 1; display: flex; flex-direction: column; position: relative; }
+        header { padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: rgba(3, 7, 18, 0.5); }
+
+        #chat-window { flex: 1; overflow-y: auto; padding: 30px 12%; display: flex; flex-direction: column; gap: 20px; }
+
+        /* Bubbles */
+        .bubble { max-width: 85%; padding: 16px 22px; border-radius: 22px; line-height: 1.6; position: relative; animation: slideUp 0.3s ease; font-size: 0.95rem; }
+        .user { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2); }
+        .ai { align-self: flex-start; background: var(--glass); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+
+        /* Code Blocks */
+        .code-block { background: var(--code-bg); border: 1px solid #334155; border-radius: 12px; margin: 15px 0; padding: 15px; font-family: 'Fira Code', monospace; font-size: 0.85rem; color: #10b981; overflow-x: auto; }
+        .code-header { font-size: 0.7rem; color: #64748b; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #222; padding-bottom: 4px; }
+
+        /* Index / Info Button & Modal */
+        #indexBtn { background: var(--glass); border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; }
+        #indexBtn:hover { border-color: var(--accent); }
+
+        #indexModal { 
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            background: var(--glass); backdrop-filter: blur(30px); padding: 30px; border-radius: 20px; 
+            border: 1px solid var(--accent); z-index: 1000; width: 90%; max-width: 500px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index: 999; }
+
+        /* Controls */
+        .input-area { padding: 20px 12% 40px 12%; background: linear-gradient(to top, var(--bg), transparent); }
+        .input-box { background: var(--glass); border: 1px solid var(--border); border-radius: 18px; padding: 8px 15px; display: flex; align-items: center; }
+        input { flex: 1; background: transparent; border: none; color: white; padding: 12px; outline: none; font-size: 1rem; }
+        .send-btn { background: var(--accent); border: none; color: white; padding: 10px 20px; border-radius: 12px; cursor: pointer; font-weight: bold; }
+
+        .source-tag { display: block; margin-top: 10px; font-size: 0.7rem; color: #64748b; border-top: 1px solid var(--border); padding-top: 8px; font-weight: bold; }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="modal-overlay" id="overlay" onclick="toggleIndex()"></div>
+<div id="indexModal">
+    <h3 style="color: var(--accent); margin-top: 0;">📚 NexusAI Befehls-Index</h3>
+    <p>Hier erfährst du, wie du meine Spezialfunktionen nutzt:</p>
+    <ul>
+        <li><strong>Rechnen:</strong> Gib einfach eine Aufgabe ein (z.B. <code>150 * 1.19</code>).</li>
+        <li><strong>Programmieren:</strong> Nutze Keywords wie <code>HTML</code>, <code>Python</code>, <code>CSS</code> oder <code>JS</code> (z.B. "Schreibe HTML Grundgerüst").</li>
+        <li><strong>Wissen:</strong> Frage nach Fakten (z.B. "Wer ist Elon Musk?"). Ich nutze 4 Quellen nacheinander.</li>
+        <li><strong>Smalltalk:</strong> Grüße mich einfach oder frage, wie es mir geht.</li>
+    </ul>
+    <button class="send-btn" style="width:100%; margin-top:10px;" onclick="toggleIndex()">Verstanden</button>
+</div>
+
+<nav id="sidebar">
+    <div class="logo">NexusAI <span style="color:white">Elite</span></div>
+    <div id="history"></div>
+    <button onclick="document.getElementById('chat-window').innerHTML=''" style="margin-top:auto; background:none; border:1px solid #333; color:#666; padding:10px; border-radius:8px; cursor:pointer;">Chat leeren</button>
+</nav>
+
+<main>
+    <header>
+        <span style="font-size: 0.85rem; color: #64748b;">Status: Hybrid-Logik V3</span>
+        <button id="indexBtn" onclick="toggleIndex()">📖 Index / Hilfe</button>
+    </header>
+
+    <div id="chat-window">
+        <div class="bubble ai">Bereit für deine Befehle. Nutze den Index-Button oben rechts für eine Übersicht meiner Funktionen.</div>
+    </div>
+
+    <div class="input-area">
+        <div class="input-box">
+            <input type="text" id="userInput" placeholder="Frage, rechne oder programmiere..." onkeypress="if(event.key==='Enter') askAI()">
+            <button class="send-btn" onclick="askAI()">Senden</button>
+        </div>
+    </div>
+</main>
+
+<script>
+    const devLibrary = {
+        html: { keywords: ["html", "grundgerüst", "website"], code: "<!DOCTYPE html>\n<html>\n<head>\n  <title>Seite</title>\n</head>\n<body>\n  <h1>Hallo Welt</h1>\n</body>\n</html>" },
+        python: { keywords: ["python", "print", "def"], code: "def hallo_welt():\n    print('Hallo von Python!')\n\nhallo_welt()" },
+        javascript: { keywords: ["js", "javascript", "script", "const"], code: "const bot = 'NexusAI';\nconsole.log(`Hallo von ${bot}`);" },
+        css: { keywords: ["css", "style", "design"], code: "body {\n  display: flex;\n  justify-content: center;\n  background: #000;\n}" }
+    };
+
+    function toggleIndex() {
+        const modal = document.getElementById('indexModal');
+        const overlay = document.getElementById('overlay');
+        const show = modal.style.display === 'block';
+        modal.style.display = show ? 'none' : 'block';
+        overlay.style.display = show ? 'none' : 'block';
+    }
+
+    async function askAI() {
+        const input = document.getElementById('userInput');
+        const query = input.value.trim();
+        if (!query) return;
+
+        addBubble(query, 'user');
+        input.value = "";
+        const lower = query.toLowerCase();
+
+        // 1. Mathe-Logik
+        if (/^[\d\s\+\-\*\/\(\)\.]+$/.test(query) && query.match(/[\+\-\*\/]/)) {
+            try { respond("Ergebnis: " + eval(query.replace(',', '.')), "Rechenkern"); return; } catch(e){}
+        }
+
+        // 2. Developer-Logik
+        for (let lang in devLibrary) {
+            if (devLibrary[lang].keywords.some(k => lower.includes(k))) {
+                const codeHtml = `Hier ist ein Code-Beispiel:<br><div class="code-block"><div class="code-header">${lang}</div><pre>${devLibrary[lang].code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre></div>`;
+                respond(codeHtml, "Developer-Modul", true);
+                return;
+            }
+        }
+
+        // 3. Smalltalk-Logik
+        if (lower.match(/(hallo|hi|hey|guten tag|moin)/)) {
+            respond("Hallo! Wie kann ich dir heute beim Rechnen, Programmieren oder Suchen helfen?", "Interne Logik");
+            return;
+        }
+
+        // 4. Kaskaden-Wissenssuche
+        respond("Ich durchsuche die Wissens-Kaskade...", "System");
+        const result = await cascadeSearch(query);
+        respond(result.text, result.source);
+    }
+
+    async function cascadeSearch(q) {
+        const term = q.replace(/(wer|was|wie|ist|suche)/gi, "").trim();
+        const ddg = await fetchDDG(term);
+        if (ddg && ddg.AbstractText) return { text: ddg.AbstractText, source: "DuckDuckGo" };
+        
+        const wp = await fetchWiki(term, "de.wikipedia.org");
+        if (wp && wp.extract) return { text: wp.extract, source: "Wikipedia" };
+
+        return { text: "Keine Infos in DDG oder Wikipedia gefunden.", source: "Suche beendet" };
+    }
+
+    function fetchDDG(q) {
+        return new Promise((resolve) => {
+            const cb = 'ddg_cb_' + Math.floor(Math.random() * 1000);
+            const s = document.createElement('script');
+            window[cb] = (d) => { resolve(d); document.body.removeChild(s); delete window[cb]; };
+            s.src = `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&callback=${cb}`;
+            document.body.appendChild(s);
+        });
+    }
+
+    async function fetchWiki(q, domain) {
+        try {
+            const res = await fetch(`https://${domain}/w/api.php?action=query&format=json&origin=*&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(q)}&redirects=1`);
+            const data = await res.json();
+            const pages = data.query.pages;
+            const id = Object.keys(pages)[0];
+            return id !== "-1" ? pages[id] : null;
+        } catch(e) { return null; }
+    }
+
+    function addBubble(text, type, source = "", isHtml = false) {
+        const win = document.getElementById('chat-window');
+        const div = document.createElement('div');
+        div.className = `bubble ${type}`;
+        if(isHtml) div.innerHTML = text; else div.innerText = text;
+        if(source) div.innerHTML += `<span class="source-tag">🔍 ${source}</span>`;
+        win.appendChild(div);
+        win.scrollTop = win.scrollHeight;
+    }
+
+    function respond(text, source, isHtml = false) {
+        const bubbles = document.querySelectorAll('.ai');
+        bubbles.forEach(b => { if(b.innerText.includes("Kaskaden-Suche")) b.remove(); });
+        addBubble(text, 'ai', source, isHtml);
+    }
+</script>
+</body>
+</html>
